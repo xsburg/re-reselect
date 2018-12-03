@@ -38,6 +38,123 @@ function testSelector() {
   )((state: State) => state.foo);
 }
 
+function testGenericRestParams() {
+  type State = {foo: string};
+
+  function compute(...args: any[]) {
+    return true;
+  }
+
+  const selectArgument1 = <T>(arg1: T): T => arg1;
+  const selectArgument2 = <T>(arg1: any, arg2: T): T => arg2;
+  const selectArgument3 = <T>(arg1: any, arg2: any, arg3: T): T => arg3;
+  const selectArgument4 = <T>(arg1: any, arg2: any, arg3: any, arg4: T): T =>
+    arg4;
+
+  {
+    // old school selector with maximum typing
+    const selector = createCachedSelector(
+      (state: State, arg1: string, arg2: number, arg3: boolean) => arg1,
+      (state: State, arg1: string, arg2: number, arg3: boolean) => arg2,
+      (state: State, arg1: string, arg2: number, arg3: boolean) => arg3,
+      (arg1, arg2, arg3) => compute(arg1, arg2, arg3)
+    )((state: State) => state.foo);
+    selector({foo: 'bar'}, 'foo', 1, false);
+  }
+
+  {
+    // old school selector with omitting unneeded arguments
+    const selector = createCachedSelector(
+      (state: State, arg1: string) => arg1,
+      (state: State, arg1: string, arg2: number) => arg2,
+      (state: State, arg1: string, arg2: number, arg3: boolean) => arg3,
+      (arg1, arg2, arg3) => compute(arg1, arg2, arg3)
+    )((state: State) => state.foo);
+    selector({foo: 'bar'}, 'foo', 1, false);
+  }
+
+  {
+    // using select arguments
+    const selector = createCachedSelector(
+      selectArgument2,
+      selectArgument3,
+      selectArgument4,
+      (arg1: string, arg2: number, arg3: boolean) => compute(arg1, arg2, arg3)
+    )(selectArgument2);
+    selector({foo: 'bar'}, 'foo', 1, false);
+  }
+
+  {
+    // using select arguments with explicit selector signature
+    const selector: (
+      state: State,
+      userId: string,
+      age: number,
+      isAdmin: boolean
+    ) => boolean = createCachedSelector(
+      selectArgument2,
+      selectArgument3,
+      selectArgument4,
+      (arg2: string, arg3: number, arg4: boolean) => compute(arg2, arg3, arg4)
+    )(selectArgument2);
+    selector({foo: 'bar'}, 'foo', 1, false);
+  }
+
+  {
+    // checking that explicit/implicit typings don't contradict
+    const selector = createCachedSelector<
+      State,
+      [string, number, boolean],
+      string,
+      number,
+      boolean,
+      boolean
+    >(
+      (state: State, arg1: string, arg2: number, arg3: boolean) => arg1,
+      (state: State, arg1: string, arg2: number, arg3: boolean) => arg2,
+      (state: State, arg1: string, arg2: number, arg3: boolean) => arg3,
+      (arg1, arg2, arg3) => compute(arg1, arg2, arg3)
+    )((state: State) => state.foo);
+    selector({foo: 'bar'}, 'foo', 1, false);
+  }
+
+  {
+    // optimal typing for complex cases - all in one place
+    const selector = createCachedSelector<
+      State,
+      [string, number, boolean],
+      string,
+      number,
+      boolean,
+      boolean
+    >(
+      (state, arg1, arg2, arg3) => arg1,
+      (state, arg1, arg2, arg3) => arg2,
+      (state, arg1, arg2, arg3) => arg3,
+      (arg1, arg2, arg3) => compute(arg1, arg2, arg3)
+    )(state => state.foo);
+    selector({foo: 'bar'}, 'foo', 1, false);
+  }
+
+  {
+    // optimal typing for complex cases - omit unnecessary arguments
+    const selector = createCachedSelector<
+      State,
+      [string, number, boolean],
+      string,
+      number,
+      boolean,
+      boolean
+    >(
+      (state, arg1) => arg1,
+      (state, arg1, arg2) => arg2,
+      (state, arg1, arg2, arg3) => arg3,
+      (arg1, arg2, arg3) => compute(arg1, arg2, arg3)
+    )(state => state.foo);
+    selector({foo: 'bar'}, 'foo', 1, false);
+  }
+}
+
 function testNestedSelector() {
   type State = {foo: string; bar: number; baz: boolean};
 
